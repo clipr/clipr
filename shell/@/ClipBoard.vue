@@ -57,6 +57,7 @@
                 clipboard: [],
                 searchClipBoard: [],
                 lastCopied: null,
+                lastSynced: null,
                 searching: false,
                 searchForm: {
                     term: ""
@@ -166,6 +167,7 @@
                         });
                         change.change.docs.forEach((d) => {
                             addToViewClipboard(cmp, (d.id || d._id), d.ts, d.fullText);
+                            cmp.lastSynced = d.fullText;
                         });
                         clipSearchDb.bulkDocs(searchDocs)
                         .then(function() {
@@ -189,10 +191,13 @@
     function addToViewClipboard(cmp, id, ts, text) {
         if (!text || text.length === 0) return {addedToView: false, except: null};
         if (cmp.clipboard.length > 0) {
-            if (text === cmp.clipboard[0].fullText) {
+            if (cmp.clipboard.find(clip => clip.fullText === text)) {
                 return {addedToView: false, except: null};
             }
             if (text === cmp.lastCopied) {
+                return {addedToView: false, except: null};
+            }
+            if (text === cmp.lastSynced) {
                 return {addedToView: false, except: null};
             }
         }
@@ -207,7 +212,18 @@
             fullText: text,
             except: except
         });
+        cmp.clipboard.sort(compareTs);
         return {addedToView: true, except: except};
+    }
+
+    function compareTs(a, b) {
+        if (a.ts > b.ts) {
+            return -1;
+        }
+        if (a.ts < b.ts) {
+            return 1;
+        }
+        return 0;
     }
 
     function startReader(cmp) {
@@ -220,6 +236,8 @@
             const {addedToView, except} = addToViewClipboard(cmp, id, ts, text);
 
             if (!addedToView) return;
+
+            console.info("adding", except || text, ts);
 
             clipDb.put({
                 _id: id,

@@ -185,6 +185,7 @@
             Bus.$on("clear-local-data", function() {
                 try {
                     if (refreshCookieTimer) clearInterval(refreshCookieTimer);
+                    store.clear();
                     reset(cmp);
                 } catch (e) {
                     return reportError(e);
