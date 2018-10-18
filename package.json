@@ -13,9 +13,9 @@
   "scripts": {
     "watch": "CLIPR_ENV=development webpack --config webpack.config.js --watch",
     "run": "CLIPR_ENV=development nodemon",
-    "dist_linux": "webpack && electron-builder build --linux --always",
-    "dist_windows": "webpack && electron-builder build --win --always",
-    "dist_mac": "webpack && electron-builder build --mac --always"
+    "dist_linux": "webpack && electron-builder build --linux --publish always",
+    "dist_windows": "webpack && electron-builder build --win --publish always",
+    "dist_mac": "webpack && electron-builder build --mac --publish always"
   },
   "devDependencies": {
     "copy-webpack-plugin": "4.5.2",
