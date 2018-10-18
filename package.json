@@ -67,7 +67,6 @@
         "zip"
       ],
       "icon": "assets/icons/icon.ico"
-      }
     },
     "mac": {
       "target": "default",
