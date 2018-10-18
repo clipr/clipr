@@ -1,0 +1,91 @@
+{
+  "name": "clipr",
+  "version": "1.0.20",
+  "description": "The clipboard that syncs!",
+  "homepage": "https://clipr.cloud",
+  "license": "GPL-3.0",
+  "repository": "https://github.com/clipr/clipr",
+  "author": {
+    "name": "clipr.cloud",
+    "email": "hello@clipr.cloud"
+  },
+  "main": "main.js",
+  "scripts": {
+    "watch": "CLIPR_ENV=development webpack --config webpack.config.js --watch",
+    "run": "CLIPR_ENV=development nodemon",
+    "dist_linux": "webpack && electron-builder build --linux",
+    "dist_windows": "webpack && electron-builder build --win",
+    "dist_mac": "webpack && electron-builder build --mac"
+  },
+  "devDependencies": {
+    "copy-webpack-plugin": "4.5.2",
+    "css-loader": "1.0.0",
+    "electron": "2.0.11",
+    "electron-builder": "20.28.4",
+    "element-ui": "2.4.8",
+    "eslint": "5.6.1",
+    "eslint-config-google": "0.10.0",
+    "file-loader": "2.0.0",
+    "less": "3.8.1",
+    "less-loader": "4.1.0",
+    "nodemon": "1.18.4",
+    "vue": "2.5.17",
+    "vue-loader": "15.4.2",
+    "vue-template-compiler": "2.5.17",
+    "webpack": "4.20.2",
+    "webpack-cli": "3.1.2",
+    "webpack-dev-server": "3.1.9"
+  },
+  "dependencies": {
+    "@sentry/electron": "0.11.0",
+    "auto-launch": "5.0.5",
+    "electron-google-analytics": "0.1.0",
+    "electron-positioner": "4.1.0",
+    "electron-store": "2.0.0",
+    "electron-updater": "3.0.4",
+    "extend": "3.0.2",
+    "lodash": "4.17.11",
+    "pouchdb": "7.0.0"
+  },
+  "build": {
+    "appId": "com.clipr.cloud",
+    "productName": "Clipr cloud",
+    "copyright": "© 2018 clipr.cloud",
+    "asar": true,
+    "files": [
+      "!shell/",
+      "!webpack.config.js",
+      "!.eslintrc.js",
+      "!.electron-symbols"
+    ],
+    "extraFiles": [
+      "./assets"
+    ],
+    "win": {
+      "target": [
+        "nsis-web",
+        "zip"
+      ],
+      "icon": "assets/icons/icon.ico"
+      }
+    },
+    "mac": {
+      "target": "default",
+      "icon": "assets/icons/icon.icns"
+    },
+    "linux": {
+      "target": [
+        "appImage",
+        "tar.gz"
+      ],
+      "icon": "assets/icons/icon.icns"
+    },
+    "appImage": {
+      "systemIntegration": "doNotAsk"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "clipr"
+    }
+  }
+}
