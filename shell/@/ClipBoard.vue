@@ -155,8 +155,9 @@
                     })
                 });
                 syncHandler = clipDb.sync(remoteDb, {
-                    live: true
-                }).on('change', function (change) {
+                    live: true,
+                    retry: true
+                }).on("change", function (change) {
                     console.log("sync", change);
                     if (change.direction === "pull") {
                         const searchDocs = change.change.docs.map(d => {
@@ -165,7 +166,7 @@
                                 key: d.id || d._id
                             };
                         });
-                        change.change.docs.forEach((d) => {
+                        change.change.docs.forEach(d => {
                             addToViewClipboard(cmp, (d.id || d._id), d.ts, d.fullText);
                             cmp.lastSynced = d.fullText;
                         });
