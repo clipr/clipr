@@ -211,3 +211,10 @@ function disableShortcut() {
         console.log("shortcut already unregistered");
     }
 }
+
+ipcMain.on("set-position", function(_, newPos) {
+    console.log("setting window position:", newPos);
+    const position = mb.positioner.calculate(newPos);
+    mb.customPos = mb.customPos || position;
+    mb.window.setPosition(position.x, position.y);
+});

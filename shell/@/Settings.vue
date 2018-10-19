@@ -40,17 +40,30 @@
             </el-col>
         </el-row>
         <el-row class="elem">
-            <el-col :span="12">
-                <el-button type="danger" round @click="clearLocalData">Clear local data</el-button>
-            </el-col>
-            <el-col :span="12">
-                <el-button round @click="quitApp">Quit</el-button>
+            <el-col :span="24">
+                <label>Window Position</label>
+                <el-select v-model="settings.selectedPosition" placeholder="Select">
+                    <el-option
+                        v-for="pos in availablePositions"
+                        :key="pos.value"
+                        :label="pos.label"
+                        :value="pos.value">
+                    </el-option>
+                </el-select>
             </el-col>
         </el-row>
         <el-row class="elem" v-show="showUpdateForm">
             <el-col :span="24">
                 <label>A new update is available!</label>&nbsp;
                 <el-button round type="primary" @click="installUpdate">Install</el-button>
+            </el-col>
+        </el-row>
+        <el-row class="elem">
+            <el-col :span="12">
+                <el-button type="danger" round @click="clearLocalData">Clear local data</el-button>
+            </el-col>
+            <el-col :span="12">
+                <el-button round @click="quitApp">Quit</el-button>
             </el-col>
         </el-row>
         <el-tag id="version">v{{version}}</el-tag>
@@ -70,10 +83,24 @@
                     launchOnStart: loadSetting("launchOnStart", true),
                     shortcutEnabled: loadSetting("shortcutEnabled", true),
                     hasAlternativeSyncProvider: loadSetting("hasAlternativeSyncProvider", false),
-                    syncProvider: loadSetting("syncProvider", "https://sync.clipr.cloud")
+                    syncProvider: loadSetting("syncProvider", "https://sync.clipr.cloud"),
+                    selectedPosition: loadSetting("windowPosition", "")
                 },
                 showUpdateForm: false,
-                version: pkg.version
+                version: pkg.version,
+                availablePositions: [{
+                    label: "Bottom Right",
+                    value: "bottomRight"
+                }, {
+                    label: "Bottom Left",
+                    value: "bottomLeft"
+                }, {
+                    label: "Top Right",
+                    value: "topRight"
+                }, {
+                    label: "Top Left",
+                    value: "topLeft"
+                }]
             };
         },
         methods: {
@@ -126,7 +153,11 @@
                     this.settings.syncProvider = "https://sync.clipr.cloud";
                     this.addAlternativeProvider();
                 }
-            }
+            },
+            "settings.selectedPosition": function(newval, oldval) {
+                ipcRenderer.send("set-position", newval);
+                saveSetting("windowPosition", newval);
+            },
         },
         created: function() {
             ipcRenderer.send("setting-launch-on-start", loadSetting("launchOnStart", true));
@@ -137,14 +168,19 @@
             if (loadSetting("hasAlternativeSyncProvider", false)) {
                 ipcRenderer.send("sync-provider", loadSetting("syncProvider", "https://sync.clipr.cloud"));
             }
+            if (loadSetting("windowPosition", false)) {
+                ipcRenderer.send("set-position", loadSetting("windowPosition", ""));
+            }
         }
     }
 </script>
 
 <style lang="less" scoped>
     #wrapper {
-        // text-align: center;
+        max-height: 300px;
+        overflow-y: auto;
         margin: 10px;
+        margin-top: 20px;
     }
     .elem {
         margin: 20px;
@@ -156,5 +192,21 @@
         border-radius: 0px;
         border: none;
         border-bottom-left-radius: 10px;
+    }
+    #wrapper::-webkit-scrollbar {
+        width: 8px;
+        background-color: #fff;
+        border-radius: 10px;
+    }
+    #wrapper::-webkit-scrollbar-thumb {
+        width: 8px;
+        background-color: #9368B7;
+        border-radius: 10px;
+    }
+    #wrapper::-webkit-scrollbar-track {
+        -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+        box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+        background-color: #F5F5F5;
+        border-radius: 10px;
     }
 </style>

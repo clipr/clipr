@@ -170,8 +170,8 @@ module.exports = function create(opts) {
 
             var position = menubar.positioner.calculate(noBoundsPosition || opts.windowPosition, trayPos);
 
-            var x = (opts.x !== undefined) ? opts.x : position.x;
-            var y = (opts.y !== undefined) ? opts.y : position.y;
+            var x = (menubar.customPos) ? menubar.customPos.x : position.x;
+            var y = (menubar.customPos) ? menubar.customPos.y : position.y;
 
             menubar.window.setPosition(x, y);
             menubar.window.show();
