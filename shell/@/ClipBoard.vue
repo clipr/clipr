@@ -38,12 +38,32 @@
     import {clipboard} from "electron";
     import {debounce} from "lodash";
     import PouchDb from "pouchdb";
+    import transformPouch from "transform-pouch";
+    import {deflateRaw, inflateRaw} from "zlib";
     import Bus from "../bus";
     import {loadSetting} from "../settingsLoader";
+
     const Store = require("electron-store");
     const store = new Store();
 
+    PouchDb.plugin(transformPouch);
+
     let clipDb = new PouchDb("clipDb");
+    clipDb.transform({
+        incoming: function(doc) {
+            if (doc.compressed) {
+                return new Promise(function(resolve, reject) {
+                    inflateRaw(Buffer.from(doc.fullText, "base64"), function(err, buff) {
+                        if (err) return reject(err);
+                        doc.fullText = buff.toString();
+                        resolve(doc);
+                    });
+                });
+            } else {
+                return Promise.resolve(doc);
+            }
+        }
+    });
     let clipSearchDb = new PouchDb("clipSearchDb");
     let readerTimer;
     let syncHandler;
@@ -154,27 +174,47 @@
                         }
                     })
                 });
+                remoteDb.transform({
+                    incoming: function(doc) {
+                        return new Promise(function(resolve, reject) {
+                            if (doc.fullText && doc.fullText.length > 120) {
+                                doc.compressed = true;
+                                deflateRaw(doc.fullText, function(err, buff) {
+                                    if (err) return reject(err);
+                                    doc.fullText = buff.toString("base64");
+                                    resolve(doc);
+                                });
+                            } else {
+                                resolve(doc);
+                            }
+                        });
+                    }
+                });
                 syncHandler = clipDb.sync(remoteDb, {
                     live: true,
                     retry: true
                 }).on("change", function (change) {
                     console.log("sync", change);
                     if (change.direction === "pull") {
-                        const searchDocs = change.change.docs.map(d => {
-                            return {
-                                _id: `search__${(d.except || d.fullText).replace(/\s*/g, "").toLowerCase()}__${d.ts}`,
-                                key: d.id || d._id
-                            };
-                        });
-                        change.change.docs.forEach(d => {
-                            addToViewClipboard(cmp, (d.id || d._id), d.ts, d.fullText);
-                            cmp.lastSynced = d.fullText;
-                        });
-                        clipSearchDb.bulkDocs(searchDocs)
-                        .then(function() {
-                            console.log("synced to search");
-                        })
-                        .catch(function(err) {
+                        Promise.all(change.change.docs).then(function(docs) {
+                            const searchDocs = docs.map(d => {
+                                return {
+                                    _id: `search__${(d.except || d.fullText).replace(/\s*/g, "").toLowerCase()}__${d.ts}`,
+                                    key: d.id || d._id
+                                };
+                            });
+                            docs.forEach(d => {
+                                addToViewClipboard(cmp, (d.id || d._id), d.ts, d.fullText);
+                                cmp.lastSynced = d.fullText;
+                            });
+                            clipSearchDb.bulkDocs(searchDocs)
+                            .then(function() {
+                                console.log("synced to search");
+                            })
+                            .catch(function(err) {
+                                reportError(err);
+                            });
+                        }).catch(function(err) {
                             reportError(err);
                         });
                     }

@@ -1,6 +1,6 @@
 {
   "name": "clipr",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "description": "The clipboard that syncs!",
   "homepage": "https://clipr.cloud",
   "license": "GPL-3.0",
@@ -45,7 +45,8 @@
     "electron-updater": "3.0.4",
     "extend": "3.0.2",
     "lodash": "4.17.11",
-    "pouchdb": "7.0.0"
+    "pouchdb": "7.0.0",
+    "transform-pouch": "1.1.4"
   },
   "build": {
     "appId": "com.clipr.cloud",
