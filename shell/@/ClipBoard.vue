@@ -37,6 +37,7 @@
 <script>
     import {clipboard} from "electron";
     import {debounce} from "lodash";
+    import {createCipher, createDecipher} from "crypto";
     import PouchDb from "pouchdb";
     import transformPouch from "transform-pouch";
     import {deflateRaw, inflateRaw} from "zlib";
@@ -46,11 +47,21 @@
     const Store = require("electron-store");
     const store = new Store();
 
+    let encryptionKey;
+    let usesEncryption;
+
     PouchDb.plugin(transformPouch);
 
     let clipDb = new PouchDb("clipDb");
     clipDb.transform({
         incoming: function(doc) {
+            usesEncryption = (usesEncryption === true || usesEncryption === false) ? usesEncryption : store.get("usesEncryption");
+            if (usesEncryption && doc.encrypted) {
+                doc.fullText = decrypt(doc.fullText);
+                if (doc.except) {
+                    doc.except = decrypt(doc.except);
+                }
+            }
             if (doc.compressed) {
                 return new Promise(function(resolve, reject) {
                     inflateRaw(Buffer.from(doc.fullText, "base64"), function(err, buff) {
@@ -153,6 +164,8 @@
                 clipSearchDb = new PouchDb("clipSearchDb");
                 cmp.clipboard = [];
                 cmp.lastCopied = null;
+                usesEncryption = undefined;
+                encryptionKey = undefined;
             });
 
             Bus.$on("sync-provider-changed", function(args) {
@@ -161,6 +174,8 @@
                     syncHandler.cancel();
                 }
                 syncProvider = args.provider;
+                usesEncryption = undefined;
+                encryptionKey = undefined;
             });
 
             Bus.$on("start-sync", function() {
@@ -182,8 +197,30 @@
                                 deflateRaw(doc.fullText, function(err, buff) {
                                     if (err) return reject(err);
                                     doc.fullText = buff.toString("base64");
-                                    resolve(doc);
+                                    usesEncryption = (usesEncryption === true || usesEncryption === false) ? usesEncryption : store.get("usesEncryption");
+                                    if (usesEncryption) {
+                                        doc.encrypted = true;
+                                        doc.fullText = encrypt(doc.fullText);
+                                        if (doc.except) {
+                                            doc.except = encrypt(doc.except);
+                                        }
+                                        resolve(doc);
+                                    } else {
+                                        resolve(doc);
+                                    }
                                 });
+                            } else if (doc.fullText) {
+                                usesEncryption = (usesEncryption === true || usesEncryption === false) ? usesEncryption : store.get("usesEncryption");
+                                if (usesEncryption) {
+                                    doc.encrypted = true;
+                                    doc.fullText = encrypt(doc.fullText);
+                                    if (doc.except) {
+                                        doc.except = encrypt(doc.except);
+                                    }
+                                    resolve(doc);
+                                } else {
+                                    resolve(doc);
+                                }
                             } else {
                                 resolve(doc);
                             }
@@ -319,6 +356,22 @@
                 reportError(err);
             });
         }
+    }
+
+    function encrypt(value) {
+        encryptionKey = encryptionKey || store.get("key");
+        const cipher = createCipher("aes256", encryptionKey);
+        let encryptedValue = cipher.update(value, "utf8", "hex");
+        encryptedValue += cipher.final("hex");
+        return encryptedValue;
+    }
+
+    function decrypt(value) {
+        encryptionKey = encryptionKey || store.get("key");
+        const decipher = createDecipher("aes256", encryptionKey);
+        let decryptedValue = decipher.update(value, "hex", "utf8");
+        decryptedValue += decipher.final("utf8");
+        return decryptedValue;
     }
 </script>
 

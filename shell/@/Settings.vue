@@ -75,6 +75,8 @@
     import Bus from "../bus";
     import {loadSetting, saveSetting} from "../settingsLoader";
     import pkg from "../../package.json"
+    const Store = require("electron-store");
+    const store = new Store();
 
     export default {
         data: function() {
@@ -109,6 +111,8 @@
                 process.exit(0);
             },
             clearLocalData: function() {
+                store.clear();
+                this.settings.hasAlternativeSyncProvider = false;
                 Bus.$emit("clear-local-data");
                 const h = this.$createElement;
                 this.$message({

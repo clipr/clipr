@@ -48,6 +48,7 @@
 <script>
     import Bus from "../bus";
     import {ipcRenderer, shell} from "electron";
+    import {randomBytes, createCipher, createDecipher} from "crypto";
     import {loadSetting} from "../settingsLoader";
     const Store = require("electron-store");
     const store = new Store();
@@ -96,6 +97,13 @@
                 })
                 .then(function(body) {
                     store.set("accessToken", body.token);
+                    if (body.capabilities && body.capabilities.encryption === true && body.key) {
+                        const decryptedKey = decryptKey(cmp.loginForm.email, cmp.loginForm.password, body.key);
+                        store.set("usesEncryption", true);
+                        store.set("key", decryptedKey);
+                    } else {
+                        store.set("usesEncryption", false);
+                    }
                     cmp.logged = true;
                     cmp.newAccount = false;
                     getSyncToken(cmp, body.token);
@@ -107,6 +115,7 @@
             register: function() {
                 if (!this.checkForm("registerForm")) return;
                 const cmp = this;
+                const {key, encryptedKey} = createKey(cmp.registerForm.email, cmp.registerForm.password);
                 fetch(`${syncProvider}/register`, {
                     method: "POST",
                     mode: "cors",
@@ -116,7 +125,8 @@
                     },
                     body: JSON.stringify({
                         email: cmp.registerForm.email,
-                        password: cmp.registerForm.password
+                        password: cmp.registerForm.password,
+                        key: encryptedKey
                     }),
                 })
                 .then(function(res) {
@@ -131,6 +141,12 @@
                 })
                 .then(function(body) {
                     store.set("accessToken", body.token);
+                    if (body.capabilities && body.capabilities.encryption === true) {
+                        store.set("usesEncryption", true);
+                        store.set("key", key);
+                    } else {
+                        store.set("usesEncryption", false);
+                    }
                     cmp.logged = true;
                     cmp.newAccount = false;
                     getSyncToken(cmp, body.token);
@@ -185,7 +201,6 @@
             Bus.$on("clear-local-data", function() {
                 try {
                     if (refreshCookieTimer) clearInterval(refreshCookieTimer);
-                    store.clear();
                     reset(cmp);
                 } catch (e) {
                     return reportError(e);
@@ -210,8 +225,6 @@
         cmp.loginForm.password = "";
         cmp.registerForm.email = "";
         cmp.registerForm.password = "";
-        store.delete("syncCookie");
-        store.delete("syncDatabase");
     }
     function getSyncToken(cmp, token) {
         return fetch(`${syncProvider}/sync-token?access_token=${token}`, {
@@ -263,6 +276,25 @@
             ipcRenderer.send("refresh-sync-cookie", {cookie: body.cookie});
         })
         .catch(error => reportError(error));
+    }
+
+    function createKey(email, pass) {
+        const key = randomBytes(256).toString("hex");
+        const cipher = createCipher("aes256", `${email}__${pass}`);
+
+        let encryptedKey = cipher.update(key, "utf8", "hex");
+        encryptedKey += cipher.final("hex");
+
+        return {key, encryptedKey};
+    }
+
+    function decryptKey(email, pass, key) {
+        const decipher = createDecipher("aes256", `${email}__${pass}`);
+
+        let decryptedKey = decipher.update(key, "hex", "utf8");
+        decryptedKey += decipher.final("utf8");
+
+        return decryptedKey;
     }
 </script>
 
