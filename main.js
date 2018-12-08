@@ -2,6 +2,7 @@ const menubar = require("./menubar");
 const {ipcMain, session, app, globalShortcut} = require("electron");
 const AutoLaunch = require("auto-launch");
 const {autoUpdater} = require("electron-updater");
+const isOnline = require("is-online");
 const Sentry = require("@sentry/electron");
 let sentryEnabled = false;
 
@@ -50,12 +51,24 @@ if (isSecondInstance) {
 mb.on("ready", function ready() {
     console.log("app is ready");
     if (process.env.CLIPR_ENV !== "development" && process.platform !== "darwin") {
-        autoUpdater.checkForUpdatesAndNotify();
+        checkForUpdates();
         setInterval(function() {
-            autoUpdater.checkForUpdatesAndNotify();
+            checkForUpdates();
         }, 600000);
     }
 });
+
+function checkForUpdates() {
+    console.log("checking for network...");
+    isOnline().then(function(online) {
+        if (online) {
+            console.log("checking for updates...");
+            autoUpdater.checkForUpdatesAndNotify();
+        } else {
+            console.log("network is offline.");
+        }
+    });
+}
 
 ipcMain.on("app-quit", function() {
     quitApp();
